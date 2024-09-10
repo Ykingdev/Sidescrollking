@@ -17,8 +17,11 @@ var config = {
 };
 
 var player;
-var platforms;
+var ground, sky;
 var cursors;
+var gameSpeed = 4;
+var gameStarted = false;
+var startText;
 
 var game = new Phaser.Game(config);
 
@@ -29,20 +32,18 @@ function preload() {
 }
 
 function create() {
-    this.add.image(400, 300, 'sky');
+    sky = this.add.tileSprite(400, 300, 800, 600, 'sky');
+    ground = this.add.image(400, 568, 'ground');
 
-    // Create platforms group with physics
-    platforms = this.physics.add.staticGroup();
+    var groundPhysics = this.physics.add.staticGroup();
+    groundPhysics.create(400, 568, 'ground').setScale(2).refreshBody();  
 
-    // Add the ground (scaled to fill the width)
-    platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+    // Create the player with physics
     player = this.physics.add.sprite(100, 450, 'dude');
-    this.physics.add.collider(player, platforms);
+    player.setBounce(0.2);
+    player.setCollideWorldBounds(true);  // Prevents the player from leaving the screen
 
-
-    player.setBounce(0.2);  
-    player.setCollideWorldBounds(false);
-
+    // Set up player animations (walking left, turning, walking right)
     this.anims.create({
         key: 'left',
         frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
@@ -63,27 +64,35 @@ function create() {
         repeat: -1
     });
 
-    // Enable collision between the player and platforms
+    // Enable collision between the player and the ground
+    this.physics.add.collider(player, groundPhysics);
 
-    // Enable keyboard input for movement
+    // Display "Press the arrow keys to start" message
+    startText = this.add.text(400, 300, 'Press the arrow keys to start', { fontSize: '32px', fill: '#fff' });
+    startText.setOrigin(0.5); 
+
     cursors = this.input.keyboard.createCursorKeys();
+
+    this.cameras.main.setBounds(0, 0, Number.MAX_SAFE_INTEGER, 600);  // Infinite background width
 }
 
 function update() {
-    // Player movement logic (Use the arrow keys)
-    if (cursors.left.isDown) {
-        player.setVelocityX(-160);
-        player.anims.play('left', true);
-    } else if (cursors.right.isDown) {
-        player.setVelocityX(160);
-        player.anims.play('right', true);
-    } else {
-        player.setVelocityX(0);
-        player.anims.play('turn');
+    // Check if any arrow key is pressed to start the game
+    if (!gameStarted && (cursors.left.isDown || cursors.right.isDown || cursors.up.isDown || cursors.down.isDown)) {
+        gameStarted = true;  // Mark the game as started
+        startText.setVisible(false);  // Hide the start message
     }
 
-    // Allow the player to jump if they're touching the ground
-    if (cursors.up.isDown && player.body.touching.down) {
+    if (!gameStarted) {
+        return;
+    }
+
+    player.anims.play('right', true);  
+
+    sky.tilePositionX += gameSpeed;  // Scroll the sky (background) to the left
+
+    // Allow the player to jump if they are on the ground
+    if (player.body.touching.down && cursors.up.isDown) {
         player.setVelocityY(-330);  // Jump
     }
 }
