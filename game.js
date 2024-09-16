@@ -6,15 +6,13 @@ async function fetchBadAdvice() {
         },
         body: JSON.stringify({
             model: 'llama3.1',
-            prompt: 'Give one sentence of bad advice to a player trying to win a video game also make sure to make the player feel worthless (the videogame is an infinite sidescroller with enemies score is being tracked with time). Keep it short and misleading, like: "Touch the spiky balls" or "Let go of all buttons."',
+            prompt: 'You are roleplaying as the antagonist in an infinite sidescroller video game. Your goal is to give one short, misleading sentence of bad advice to the player in order to make them fail and feel worthless. The game involves jumping, avoiding obstacles, and surviving as long as possible, with the score tracked by time. Keep it concise, misleading, and demoralizing. Example advice: "Touch the spiky balls" or "Stop pressing all buttons." Stay in character as the antagonist and give only one sentence.',
             stream: false
         })
     });
-
     const data = await response.json();
     return data.response;
 }
-
 
 var config = {
     type: Phaser.AUTO,
@@ -23,7 +21,7 @@ var config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 400 },
+            gravity: { y: 1000 },
             debug: false
         }
     },
@@ -37,24 +35,21 @@ var config = {
 var player;
 var ground, sky;
 var cursors;
-var gameSpeed = 3;
-var baseSpeed = 2;
 var gameStarted = false;
 var gameOver = false;
 var startText, gameOverText, retryText, scoreText;
 var platforms;
 var platformSpacingX = 300;
-var platformSpacingY = 200;
 var score = 0;
 var scoreTimer;
-var pushedBack = false;
-
+var badAdviceText;
+var gameSpeed = 100;
 var game = new Phaser.Game(config);
 
 function preload() {
     this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
-    this.load.image('platform', 'assets/platform.png');  // Load platform image
+    this.load.image('platform', 'assets/platform.png');
     this.load.image('scroll', 'assets/scroll.png');
     this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
 }
@@ -62,24 +57,32 @@ function preload() {
 function create() {
     sky = this.add.tileSprite(400, 300, 800, 600, 'sky');
 
-    ground = this.add.image(400, 568, 'ground');
-
-    var groundPhysics = this.physics.add.staticGroup();
-    groundPhysics.create(400, 568, 'ground').setScale(2).refreshBody();  
+    ground = this.add.tileSprite(400, 568, 800, 64, 'ground');
+    this.physics.add.existing(ground, true);
 
     player = this.physics.add.sprite(100, 450, 'dude');
-    player.setBounce(0.2);
-    player.setCollideWorldBounds(true); 
-    player.setImmovable(false);
+    player.setBounce(0);
+    player.setCollideWorldBounds(true);
 
+    this.anims.create({
+        key: 'left',
+        frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
+        frameRate: 15,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'turn',
+        frames: [{ key: 'dude', frame: 4 }],
+        frameRate: 20
+    });
     this.anims.create({
         key: 'right',
         frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
-        frameRate: 10,
+        frameRate: 15,
         repeat: -1
     });
 
-    this.physics.add.collider(player, groundPhysics);
+    this.physics.add.collider(player, ground);
 
     startText = this.add.text(400, 300, 'Press the arrow keys to start', { fontSize: '32px', fill: '#fff' });
     startText.setOrigin(0.5);
@@ -90,25 +93,23 @@ function create() {
 
     retryText = this.add.text(400, 300, 'Press spacebar to retry', { fontSize: '32px', fill: '#fff' });
     retryText.setOrigin(0.5);
-    retryText.setVisible(false);  
+    retryText.setVisible(false);
 
     scoreText = this.add.text(10, 10, 'Score: 0', { fontSize: '24px', fill: '#fff' });
 
     cursors = this.input.keyboard.createCursorKeys();
 
     platforms = this.physics.add.group({
-        allowGravity: false, 
-        immovable: true  
+        allowGravity: false,
+        immovable: true
     });
 
     generatePlatforms();
-    this.physics.add.overlap(player, platforms, handlePlatformOverlap, null, this);
-    this.cameras.main.setBounds(0, 0, Number.MAX_SAFE_INTEGER, 600); 
-
+    this.physics.add.collider(player, platforms);
 
     var scrollImage = this.add.image(400, 100, 'scroll');
-    scrollImage.setScale(1.5); 
-    scrollImage.setVisible(false); 
+    scrollImage.setScale(1.5);
+    scrollImage.setVisible(false);
 
     badAdviceText = this.add.text(400, 100, '', {
         fontSize: '16px',
@@ -124,8 +125,8 @@ function create() {
         const advice = await fetchBadAdvice();
         showBadAdvice(advice, scrollImage);
     }, 10000);
-
 }
+
 function showBadAdvice(advice, scrollImage) {
     scrollImage.setVisible(true);
     badAdviceText.setText(advice);
@@ -139,10 +140,10 @@ function showBadAdvice(advice, scrollImage) {
 }
 
 function update() {
-    if (!gameStarted && (cursors.left.isDown || cursors.right.isDown || cursors.up.isDown || cursors.down.isDown)) {
-        gameStarted = true;  
-        startText.setVisible(false);  
-        startScoreTimer();  
+    if (!gameStarted && (cursors.left.isDown || cursors.right.isDown || cursors.up.isDown)) {
+        gameStarted = true;
+        startText.setVisible(false);
+        startScoreTimer();
     }
 
     if (gameOver) {
@@ -156,54 +157,53 @@ function update() {
         return;
     }
 
-    player.anims.play('right', true);
+    player.setVelocityX(-gameSpeed);
 
-    sky.tilePositionX += gameSpeed;
+    if (cursors.right.isDown) {
+        player.setVelocityX(200);
+        player.anims.play('right', true);
+    } else if (cursors.left.isDown) {
+        player.setVelocityX(-200 - gameSpeed);
+        player.anims.play('left', true);
+    } else {
+        player.anims.play('turn');
+    }
 
-    if (player.body.touching.down && cursors.up.isDown) {
-        player.setVelocityY(-330); 
+    if (cursors.up.isDown && player.body.touching.down) {
+        player.setVelocityY(-500);
+    }
+
+    if (player.x <= 0 || player.y > 600) {
+        endGame();
     }
 
     platforms.children.iterate(function (platform) {
-        platform.x -= gameSpeed;  
+        platform.x -= gameSpeed * this.game.loop.delta / 1000;
         if (platform.x < -platform.width) {
-            resetPlatform(platform);  
+            platform.x = 800 + Phaser.Math.Between(0, 400);
+            platform.y = Phaser.Math.Between(200, 500);
         }
-    });
-
-    if (player.x <= 0) {
-        endGame();
-    }
+    }, this);
 }
 
-
-function handlePlatformOverlap(player, platform) {
-    if (player.body.velocity.y >= 0 && player.body.bottom <= platform.body.top + 10) {
-        this.physics.world.collide(player, platform);
-    }
-}
 function endGame() {
     gameOver = true;
     gameOverText.setVisible(true);
-    retryText.setVisible(true); 
-
-    
-    player.setVelocityX(0);
-    platforms.setVelocityX(0); 
-
+    retryText.setVisible(true);
+    player.setVelocity(0);
     stopScoreTimer();
 }
 
 function startScoreTimer() {
-    score = 0;  
+    score = 0;
     scoreTimer = setInterval(() => {
-        score += 1;  
-        scoreText.setText('Score: ' + score);  
+        score += 1;
+        scoreText.setText('Score: ' + score);
     }, 1000);
 }
 
 function stopScoreTimer() {
-    clearInterval(scoreTimer);  
+    clearInterval(scoreTimer);
 }
 
 function restartGame() {
@@ -211,48 +211,24 @@ function restartGame() {
     gameStarted = false;
 
     player.setPosition(100, 450);
-    player.setVelocityX(0);
+    player.setVelocity(0);
 
-    platforms.children.iterate(function (platform) {
-        resetPlatform(platform);
-    });
+    platforms.clear(true, true);
+    generatePlatforms();
 
     gameOverText.setVisible(false);
     retryText.setVisible(false);
     startText.setVisible(true);
 
     scoreText.setText('Score: 0');
-    gameSpeed = baseSpeed;  
-    pushedBack = false;  
 }
 
 function generatePlatforms() {
     var x = 800;
-    var y = 500;  
-    var previousY = y;  
-
-    for (var i = 0; i < 5; i++) {
-        if (i === 0) {
-            y = 500;
-        } else {
-
-            y = Phaser.Math.Between(previousY - 200, previousY + 200);
-
-            y = Phaser.Math.Clamp(y, 400, 600);
-        }
-
+    for (var i = 0; i < 10; i++) {
+        var y = Phaser.Math.Between(200, 500);
         var platform = platforms.create(x, y, 'platform');
         platform.setScale(0.5).refreshBody();
-
-        previousY = y;
-
-        x += Phaser.Math.Between(platformSpacingX, platformSpacingX + 100);  
+        x += Phaser.Math.Between(platformSpacingX, platformSpacingX + 200);
     }
-}
-
-
-
-function resetPlatform(platform) {
-    platform.x = 800;  
-    platform.y = Phaser.Math.Between(200, 500);  
 }
