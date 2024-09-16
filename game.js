@@ -55,6 +55,7 @@ function preload() {
     this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
     this.load.image('platform', 'assets/platform.png');  // Load platform image
+    this.load.image('scroll', 'assets/scroll.png');
     this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
 }
 
@@ -105,20 +106,35 @@ function create() {
     this.cameras.main.setBounds(0, 0, Number.MAX_SAFE_INTEGER, 600); 
 
 
-    badAdviceText = this.add.text(400, 100, '', { fontSize: '12px', fill: '#ff0000', align: 'center', wordWrap: { width: 700 } });
+    var scrollImage = this.add.image(400, 100, 'scroll');
+    scrollImage.setScale(1.5); 
+    scrollImage.setVisible(false); 
 
+    badAdviceText = this.add.text(400, 100, '', {
+        fontSize: '16px',
+        fill: '#000',
+        align: 'center',
+        wordWrap: { width: 700 }
+    });
     badAdviceText.setOrigin(0.5);
+    badAdviceText.setDepth(1);
+    badAdviceText.setVisible(false);
 
     setInterval(async () => {
-        const advice = await fetchBadAdvice(); 
-        showBadAdvice(advice); 
-    }, 10000); 
+        const advice = await fetchBadAdvice();
+        showBadAdvice(advice, scrollImage);
+    }, 10000);
+
 }
-function showBadAdvice(advice) {
+function showBadAdvice(advice, scrollImage) {
+    scrollImage.setVisible(true);
     badAdviceText.setText(advice);
+    badAdviceText.setVisible(true);
 
     setTimeout(() => {
         badAdviceText.setText('');
+        badAdviceText.setVisible(false);
+        scrollImage.setVisible(false);
     }, 5000);
 }
 
