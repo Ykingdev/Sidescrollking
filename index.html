@@ -4,12 +4,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phaser Game</title>
+    <title>Phaser Game with Chat</title>
+    <style>
+        /* Reset default margins and paddings */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body styling */
+        body {
+            height: 100vh;
+            display: flex;
+            padding-left: 60px;
+            padding-right: 60px;
+        justify-content: space-between;
+            align-items: center;
+            background-color: #000;
+            font-family: monospace;
+            color: #00ff00;
+        }
+
+        /* Main container */
+        .container {
+            display: flex;
+            width: 90%;
+            height: 90%;
+            max-width: 1200px;
+            background-color: #1a1a1a;
+            border-radius: 15px;
+            box-shadow: 0 0 20px #00ff00;
+            overflow: hidden;
+        }
+
+        /* Chat container */
+        .chat-container {
+            width: 30%;
+            height: 90vh;
+            border-radius: 10px;
+            min-width: 250px;
+            background-color: #262626;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        /* Chat header */
+        .chat-header {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 5px #ff0000;
+            margin-bottom: 15px;
+        }
+
+        /* Chat messages */
+        #chat-box {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        /* Individual message */
+        .message {
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message .label {
+            color: #ff0000;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .message .text {
+            color: #00ff00;
+        }
+
+        /* Blinking cursor */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 20px;
+            background-color: #00ff00;
+            animation: blink 1s steps(2, start) infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+
+            0%,
+            50%,
+            100% {
+                opacity: 1;
+            }
+
+            25%,
+            75% {
+                opacity: 0;
+            }
+        }
+
+        /* Game container */
+        .game-container {
+            flex: 1;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Canvas styling */
+        canvas {
+            border-radius: 10px;
+            box-shadow: 0 0 10px #00ff00;
+        }
+    </style>
 </head>
 
-<body>
-    <script src="node_modules/phaser/dist/phaser.js"></script>
-    <script src="game.js"></script>
+<body 
+        <!-- Chat Container -->
+        <div class="chat-container">
+            <div class="chat-header">Messages from the Evil Presence</div>
+            <div id="chat-box">
+                <!-- Dynamic messages will appear here -->
+            </div>
+            <!-- Blinking Cursor -->
+            <div class="cursor">></div>
+        </div>
+
+        <!-- Game Container -->
+            <!-- Phaser will render the game canvas here -->
+            <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+            <script src="game.js"></script>
+
+    <!-- Chat Functionality Script -->
+    <script>
+        // Function to fetch bad advice from the Ollama API
+        async function fetchBadAdvice() {
+            try {
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'llama3.1',
+                        prompt: 'You are roleplaying as the antagonist in an infinite sidescroller video game. The players goal is to survive as long as possible by running, jumping between platforms, and collecting stars while avoiding falling off the screen. The game tracks the players score based on time survived and stars collected. Your role is to provide misleading and demoralizing advice that causes the player to fail. Offer one short, misleading sentence of bad advice, designed to confuse and frustrate the player, such as "Stop pressing all buttons" or "Jump before every platform." Keep it concise, and stay in character as the antagonist who wants the player to fail.',
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.response;
+            } catch (error) {
+                console.error('Error fetching bad advice:', error);
+                return 'Failed to get advice.';
+            }
+        }
+
+        // Function to add a message to the chat
+        async function addChatMessage() {
+            const message = await fetchBadAdvice();
+            const chatBox = document.getElementById('chat-box');
+
+            // Create message element
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+
+            // Create label
+            const label = document.createElement('span');
+            label.classList.add('label');
+            label.innerText = 'Evil Presence:';
+
+            // Create text
+            const text = document.createElement('span');
+            text.classList.add('text');
+            text.innerText = message;
+
+            // Append label and text to message element
+            messageElement.appendChild(label);
+            messageElement.appendChild(text);
+
+            // Append message to chat box
+            chatBox.appendChild(messageElement);
+
+            // Scroll to the bottom of the chat box
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Initialize chat messages on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fetch the first message immediately
+            addChatMessage();
+
+            // Fetch new messages every 5 seconds
+            setInterval(addChatMessage, 5000);
+        });
+    </script>
 </body>
 
 </html>
