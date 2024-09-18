@@ -30,11 +30,11 @@ var gameSpeed = 100;
 var starsCollected = 0;
 var stars;
 var starsToDestroy = [];
+var loreText;
+var loreDisplayed = true;
+var spacebar;
 var game = new Phaser.Game(config);
 
-/**
- * Preloads game assets before the game starts.
- */
 function preload() {
     this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
@@ -44,9 +44,6 @@ function preload() {
     this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
 }
 
-/**
- * Creates the initial game scene, sets up objects, animations, and input.
- */
 function create() {
     // Add background sky
     sky = this.add.tileSprite(400, 300, 800, 600, 'sky');
@@ -82,6 +79,9 @@ function create() {
     // Set up cursor keys for player input
     cursors = this.input.keyboard.createCursorKeys();
 
+    // Set up spacebar key for progressing from lore
+    spacebar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
     // Create groups for platforms and stars
     platforms = this.physics.add.group({
         allowGravity: false,
@@ -99,24 +99,50 @@ function create() {
     this.physics.add.collider(ground, stars);
     this.physics.add.overlap(player, stars, collectStar, null, this);
 
-    // Display start text
-    startText = this.add.text(400, 300, 'Press the arrow keys to start', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
+    // Display lore text
+    loreText = this.add.text(400, 300,
+        'As an astronaut, you have crashed on an alien planet because an alien infected your crew member on your ship. You can still hear your crew member, who was usually your eyes on the ground, but now you must try not to listen to their advice.',
+        {
+            fontSize: '24px',
+            fill: '#fff',
+            align: 'center',
+            wordWrap: { width: 700 }
+        }
+    ).setOrigin(0.5);
+
+    // Hide the start text initially
+    startText = this.add.text(400, 300, 'Press the arrow keys to start', { fontSize: '32px', fill: '#fff' })
+        .setOrigin(0.5)
+        .setVisible(false);
 
     // Display game over text, hidden initially
-    gameOverText = this.add.text(400, 200, 'Game Over', { fontSize: '48px', fill: '#ff0000' }).setOrigin(0.5).setVisible(false).setDepth(10);
+    gameOverText = this.add.text(400, 200, 'Game Over', { fontSize: '48px', fill: '#ff0000' })
+        .setOrigin(0.5)
+        .setVisible(false)
+        .setDepth(10);
 
     // Display retry text, hidden initially
-    retryText = this.add.text(400, 300, 'Press spacebar to retry', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5).setVisible(false).setDepth(10);
+    retryText = this.add.text(400, 300, 'Press spacebar to retry', { fontSize: '32px', fill: '#fff' })
+        .setOrigin(0.5)
+        .setVisible(false)
+        .setDepth(10);
 
     // Display score and stars collected
     scoreText = this.add.text(10, 10, 'Time: 0', { fontSize: '24px', fill: '#fff' });
     starText = this.add.text(10, 40, 'Stars: 0', { fontSize: '24px', fill: '#fff' });
 }
 
-/**
- * The main game loop that runs every frame.
- */
 function update() {
+    // If the lore is being displayed
+    if (loreDisplayed) {
+        if (spacebar.isDown) {
+            loreText.setVisible(false);
+            loreDisplayed = false;
+            startText.setVisible(true);
+        }
+        return; // Exit update function until lore is dismissed
+    }
+
     // Start the game when an arrow key is pressed
     if (!gameStarted && (cursors.left.isDown || cursors.right.isDown || cursors.up.isDown)) {
         gameStarted = true;
@@ -126,7 +152,7 @@ function update() {
 
     // Handle game over state
     if (gameOver) {
-        if (cursors.space.isDown) {
+        if (spacebar.isDown) {
             restartGame.call(this);
         }
         return;
@@ -210,9 +236,6 @@ function update() {
     starsToDestroy = [];
 }
 
-/**
- * Ends the game, displays game over text, and stops timers.
- */
 function endGame() {
     gameOver = true;
     gameOverText.setVisible(true);
@@ -223,9 +246,6 @@ function endGame() {
     retryText.setDepth(10);
 }
 
-/**
- * Starts the score timer that increments every second.
- */
 function startScoreTimer() {
     score = 0;
     scoreTimer = setInterval(() => {
@@ -234,19 +254,14 @@ function startScoreTimer() {
     }, 1000);
 }
 
-/**
- * Stops the score timer.
- */
 function stopScoreTimer() {
     clearInterval(scoreTimer);
 }
 
-/**
- * Restarts the game to its initial state.
- */
 function restartGame() {
     gameOver = false;
     gameStarted = false;
+    loreDisplayed = true;
 
     // Reset player position and velocity
     player.setPosition(100, 450);
@@ -266,18 +281,16 @@ function restartGame() {
     this.physics.add.overlap(player, stars, collectStar, null, this);
 
     // Reset text displays
+    loreText.setVisible(true);
+    startText.setVisible(false);
     gameOverText.setVisible(false);
     retryText.setVisible(false);
-    startText.setVisible(true);
 
     scoreText.setText('Time: 0');
     starText.setText('Stars: 0');
     starsCollected = 0;
 }
 
-/**
- * Generates platforms and places stars on them.
- */
 function generatePlatforms() {
     var x = 800;
     for (var i = 0; i < 10; i++) {
@@ -297,9 +310,6 @@ function generatePlatforms() {
     }
 }
 
-/**
- * Handles the collection of stars by the player.
- */
 function collectStar(player, star) {
     star.disableBody(true, true);
     starsCollected += 1;

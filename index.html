@@ -3,7 +3,6 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phaser Game with Chat</title>
     <style>
         /* Reset default margins and paddings */
@@ -19,7 +18,7 @@
             display: flex;
             padding-left: 60px;
             padding-right: 60px;
-        justify-content: space-between;
+            justify-content: space-between;
             align-items: center;
             background-color: #000;
             font-family: monospace;
@@ -48,6 +47,7 @@
             display: flex;
             flex-direction: column;
             padding: 20px;
+            margin-bottom: 20px;
         }
 
         /* Chat header */
@@ -63,12 +63,12 @@
         #chat-box {
             flex: 1;
             overflow-y: auto;
-            margin-bottom: 10px;
+            margin-bottom: 100px;
         }
 
         /* Individual message */
         .message {
-            margin-bottom: 10px;
+            margin-bottom: 100px;
             display: flex;
             flex-direction: column;
         }
@@ -122,10 +122,51 @@
             border-radius: 10px;
             box-shadow: 0 0 10px #00ff00;
         }
+
+        /* Blinking message effect */
+        .blink {
+            animation: blinkMessage 1s step-start infinite;
+        }
+
+        @keyframes blinkMessage {
+            50% {
+                color: white;
+            }
+        }
+
+        /* Typing effect */
+        .typing {
+            border-right: .15em solid #00ff00;
+            white-space: nowrap;
+            overflow: hidden;
+            animation: typing 3s steps(40, end), blinkCaret .75s step-end infinite;
+        }
+
+        @keyframes typing {
+            from {
+                width: 0
+            }
+
+            to {
+                width: 100%
+            }
+        }
+
+        @keyframes blinkCaret {
+
+            from,
+            to {
+                border-color: transparent
+            }
+
+            50% {
+                border-color: #00ff00
+            }
+        }
     </style>
 </head>
 
-<body 
+<body>
         <!-- Chat Container -->
         <div class="chat-container">
             <div class="chat-header">Messages from the Evil Presence</div>
@@ -142,73 +183,113 @@
             <script src="game.js"></script>
 
     <!-- Chat Functionality Script -->
-    <script>
-        // Function to fetch bad advice from the Ollama API
-        async function fetchBadAdvice() {
-            try {
-                const response = await fetch('http://localhost:11434/api/generate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        model: 'llama3.1',
-                        prompt: 'You are roleplaying as the antagonist in an infinite sidescroller video game. The players goal is to survive as long as possible by running, jumping between platforms, and collecting stars while avoiding falling off the screen. The game tracks the players score based on time survived and stars collected. Your role is to provide misleading and demoralizing advice that causes the player to fail. Offer one short, misleading sentence of bad advice, designed to confuse and frustrate the player, such as "Stop pressing all buttons" or "Jump before every platform." Keep it concise, and stay in character as the antagonist who wants the player to fail.',
-                        stream: false
-                    })
-                });
+<script>
+    // Replace with your actual ElevenLabs API Key
+    const ELEVENLABS_API_KEY = 'sk_fd72f40e33adc26357d962a0ffd0fee8c5ffd8bf4e6cee8e';
+    const VOICE_ID = 'aWdzqpNT2r3arBEJzYjx';
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+    // Function to fetch bad advice from the Ollama API
+    async function fetchBadAdvice() {
+        try {
+            const response = await fetch('http://localhost:11434/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    "model": "llama3.1",
+                    "prompt": "You are roleplaying as an evil antagonist in an infinite sidescroller video game. The player's goal is to survive as long as possible by running, jumping between platforms, and collecting stars while avoiding falling off the screen. The game has a colorful, cartoonish look, with a bright blue sky, floating platforms, and shiny stars. The player controls a small, purple character in this seemingly cheerful world. Your goal is to continually give short, misleading, and manipulative advice that confuses and frustrates the player. You should never welcome the player or offer genuine help. Stay in character as a malicious, unseen force, pretending to offer guidance while subtly leading them toward failure. For example, you might say things like 'The stars are pointless, ignore them,' 'Jump early, trust me,' or 'Standing still is the safest move right now.' Always aim to create doubt, cause mistakes, and push the player towards losing. Your responses should be brief, unsettling, and timed to interfere with their actions in the game. Do not welcome the player or provide any encouragement.",
+                    "stream": false
+                })
+            });
 
-                const data = await response.json();
-                return data.response;
-            } catch (error) {
-                console.error('Error fetching bad advice:', error);
-                return 'Failed to get advice.';
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
+
+            const data = await response.json();
+            return data.response;
+        } catch (error) {
+            console.error('Error fetching bad advice:', error);
+            return 'Failed to get advice.';
+        }
+    }
+
+    // Function to fetch and play speech from ElevenLabs TTS
+    async function fetchElevenLabsTTSAndPlay(text) {
+        try {
+            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'xi-api-key': ELEVENLABS_API_KEY,
+                },
+                body: JSON.stringify({
+                    text: text,
+                    voice_settings: {
+                        stability: 0.5,
+                        similarity_boost: 0.75
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch TTS audio: ${response.status}`);
+            }
+
+            // Get the audio data as a blob
+            const audioData = await response.blob();
+
+            // Create a Blob URL and play the audio
+            const audioUrl = URL.createObjectURL(audioData);
+            const audio = new Audio(audioUrl);
+
+            return new Promise((resolve, reject) => {
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                    resolve();
+                };
+                audio.onerror = (e) => {
+                    URL.revokeObjectURL(audioUrl);
+                    reject(e);
+                };
+                audio.play().catch(reject);
+            });
+        } catch (error) {
+            console.error('Error fetching or playing TTS audio:', error);
+        }
+    }
+
+    // Function to handle playing the audio and fetching next bad advice
+    async function handleBadAdvice() {
+        // Fetch bad advice text from Ollama
+        const advice = await fetchBadAdvice();
+
+        // Log the advice in the chat box (optional)
+        const chatBox = document.getElementById('chat-box');
+        const messageElement = document.createElement('div');
+        messageElement.textContent = `Evil Presence: ${advice}`;
+        chatBox.appendChild(messageElement);
+
+        // Fetch and play the audio from ElevenLabs TTS
+        try {
+            await fetchElevenLabsTTSAndPlay(advice);
+        } catch (error) {
+            console.error('Error playing audio:', error);
         }
 
-        // Function to add a message to the chat
-        async function addChatMessage() {
-            const message = await fetchBadAdvice();
-            const chatBox = document.getElementById('chat-box');
+        // Once audio is finished, fetch and play the next piece of bad advice
+        handleBadAdvice();
+    }
 
-            // Create message element
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('message');
+    // Initialize when the page is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        handleBadAdvice();  // Start the loop
+    });
+</script>
 
-            // Create label
-            const label = document.createElement('span');
-            label.classList.add('label');
-            label.innerText = 'Evil Presence:';
+<!-- Add a chat box to display messages -->
 
-            // Create text
-            const text = document.createElement('span');
-            text.classList.add('text');
-            text.innerText = message;
-
-            // Append label and text to message element
-            messageElement.appendChild(label);
-            messageElement.appendChild(text);
-
-            // Append message to chat box
-            chatBox.appendChild(messageElement);
-
-            // Scroll to the bottom of the chat box
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        // Initialize chat messages on load
-        document.addEventListener('DOMContentLoaded', () => {
-            // Fetch the first message immediately
-            addChatMessage();
-
-            // Fetch new messages every 5 seconds
-            setInterval(addChatMessage, 5000);
-        });
-    </script>
 </body>
 
 </html>
