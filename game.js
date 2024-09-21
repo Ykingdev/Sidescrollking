@@ -5,10 +5,10 @@ class MainScene extends Phaser.Scene {
 
     preload() {
         this.load.image('sky', 'assets/sky.png');
-        this.load.image('ground', 'assets/platform.png');
+        this.load.image('ground', 'assets/ground.png');
         this.load.image('platform', 'assets/platform.png');
         this.load.image('star', 'assets/star.png');
-        this.load.image('bomb', 'assets/bomb.png');
+        this.load.image('meteor', 'assets/bomb.png');
         this.load.spritesheet('dude', 'assets/dude.png', {
             frameWidth: 32,
             frameHeight: 48
@@ -35,7 +35,8 @@ class MainScene extends Phaser.Scene {
         this.player.setDragX(600);
         this.player.setMaxVelocity(300, 600);
 
-        // Create groups
+
+        //groepen gemaakt voor de items
         this.enemies = this.physics.add.group(); 
         this.platforms = this.physics.add.group({
             allowGravity: false,
@@ -43,10 +44,9 @@ class MainScene extends Phaser.Scene {
         });
         this.stars = this.physics.add.group();
 
-        // Create a particle manager
+
         this.particles = this.add.particles('star');
 
-        // Initialize lastPlatformX and lastPlatformY
         this.lastPlatformX = this.player.x + 400;
         this.lastPlatformY = 450;
 
@@ -54,14 +54,14 @@ class MainScene extends Phaser.Scene {
 
         // Colliders and overlaps
         this.physics.add.collider(this.player, this.ground);
-        this.physics.add.collider(this.player, this.platforms, this.playerPlatformCollision, null, this);
+        this.physics.add.collider(this.player, this.platforms );
         this.physics.add.collider(this.stars, this.platforms);
+
         this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
         this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
-        this.physics.add.collider(this.enemies, this.platforms, this.bombBounce, null, this);
-        this.physics.add.collider(this.enemies, this.ground, this.bombBounce, null, this);
+        this.physics.add.collider(this.enemies, this.platforms, this.meteorBounce, null, this);
+        this.physics.add.collider(this.enemies, this.ground, this.meteorBounce, null, this); 
 
-        // Player animations
         this.anims.create({
             key: 'left',
             frames: this.anims.generateFrameNumbers('dude', {
@@ -86,13 +86,13 @@ class MainScene extends Phaser.Scene {
             repeat: -1
         });
 
-        // Input
+        // Speler input opzetten
         this.cursors = this.input.keyboard.createCursorKeys();
         this.spacebar = this.input.keyboard.addKey(
             Phaser.Input.Keyboard.KeyCodes.SPACE
         );
 
-        // Texts
+        // Text
         this.scoreText = this.add.text(10, 10, 'Time: 0', {
             fontSize: '24px',
             fill: '#fff'
@@ -185,7 +185,7 @@ class MainScene extends Phaser.Scene {
                 this.startText.setVisible(false);
                 this.startScoreTimer();
 
-                // Start the enemy timer here
+            
                 this.enemyTimer = this.time.addEvent({
                     delay: 2000, // Adjust the delay as needed
                     callback: this.spawnEnemy,
@@ -208,7 +208,7 @@ class MainScene extends Phaser.Scene {
         this.sky.tilePositionX += this.gameSpeed * delta * 0.001;
         this.ground.tilePositionX += this.gameSpeed * delta * 0.001;
 
-        // Player movement
+        // Check for player movement
         if (this.cursors.left.isDown) {
             this.player.setAccelerationX(-1000);
             this.player.anims.play('left', true);
@@ -218,6 +218,8 @@ class MainScene extends Phaser.Scene {
         } else {
             this.player.setAccelerationX(0);
 
+            // If no input, push the player left as the platforms and background scroll
+            this.player.x -= this.gameSpeed * delta * 0.001; // Move the player backward
             if (this.player.body.velocity.x > 10) {
                 this.player.anims.play('right', true);
             } else if (this.player.body.velocity.x < -10) {
@@ -237,13 +239,8 @@ class MainScene extends Phaser.Scene {
             this.player.setVelocityY(-600 * this.fallSpeedFactor);
         }
 
-        // Check if player has moved off-screen
-        if (
-            this.player.x < 0 ||
-            this.player.x > this.cameras.main.width ||
-            this.player.y > this.cameras.main.height ||
-            this.player.y < 0
-        ) {
+        // Check if the player is pushed off-screen (left side)
+        if (this.player.x < 0 || this.player.y > this.cameras.main.height || this.player.y < 0) {
             this.endGame();
         }
 
@@ -270,6 +267,7 @@ class MainScene extends Phaser.Scene {
         });
     }
 
+
     playerPlatformCollision(player, platform) {
         // Check for side collisions
         if (
@@ -292,14 +290,14 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    bombBounce(enemy, platformOrGround) {
+    meteorBounce(enemy, platformOrGround) {
         // Increase the bounce count
         enemy.bounces += 1;
 
         // Add particles at enemy's position
         this.createBounceParticles(enemy.x, enemy.y);
 
-        // Check if bomb has bounced enough times
+        // Check if meteor has bounced enough times
         if (enemy.bounces >= this.extraLives) {
             enemy.destroy();
         }
@@ -327,7 +325,7 @@ class MainScene extends Phaser.Scene {
     spawnEnemy() {
         const x = Phaser.Math.Between(0, this.game.config.width);
         const y = 0;
-        const enemy = this.enemies.create(x, y, 'bomb');
+        const enemy = this.enemies.create(x, y, 'meteor');
 
         // Set a random scale between 0.5 and 1.5
         const scale = Phaser.Math.FloatBetween(0.5, 1.5);
@@ -366,20 +364,19 @@ class MainScene extends Phaser.Scene {
             this.endGame();
         }
     }
-
     generateInitialPlatforms() {
         let x = this.lastPlatformX;
         let y = this.lastPlatformY;
 
         for (let i = 0; i < 10; i++) {
             let platform = this.platforms.create(x, y, 'platform');
-            platform.setScale(0.5).refreshBody();
+            platform.setScale(1).refreshBody();
 
-            // Adjust physics body size
-            platform.body.setSize(platform.displayWidth, platform.displayHeight);
-            platform.body.setOffset(0, 0);
+            platform.body.setImmovable(true); // Ensure the platform does not move on collision
+            platform.body.setSize(platform.displayWidth, platform.displayHeight); // Update the size to match the scale
+            platform.body.setOffset(0, 0); // Align the body
 
-            // Star on platform
+            // Add a star on the platform
             let star = this.stars.create(x, y - 32, 'star');
             star.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
             star.body.setAllowGravity(false);
@@ -389,13 +386,18 @@ class MainScene extends Phaser.Scene {
             x += 200;
             y = this.getNextPlatformY();
         }
-        this.platforms.getChildren().forEach((platform) => {
-            platform.body.setSize(platform.displayWidth, platform.displayHeight);
-            platform.body.setOffset(0, 0);
-        });
-
         this.lastPlatformX = x - 200;
     }
+
+    playerPlatformCollision(player, platform) {
+        // Custom collision handling
+        if (player.body.touching.down && platform.body.touching.up) {
+            // Stop the player from falling through the platform
+            player.setVelocityY(0);
+            player.body.position.y = platform.body.position.y - player.body.height; // Snap the player to the platform
+        }
+    }
+
 
     recyclePlatform(platform) {
         const distanceAhead = 600;
