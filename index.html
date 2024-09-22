@@ -184,10 +184,10 @@
 
     <!-- Chat Functionality Script -->
 <script>
-    // Function to fetch bad advice from the Ollama API
+ // Functie om verkeerd advies op te halen van de Ollama API
     async function fetchBadAdvice() {
         try {
-            const response = await fetch('http://localhost:11434/api/generatje', {
+            const response = await fetch('http://localhost:11434/api/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -200,64 +200,62 @@
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP-fout! status: ${response.status}`);
             }
 
             const data = await response.json();
             return data.response;
         } catch (error) {
-            console.error('Error fetching bad advice:', error);
-            return 'Failed to get advice.';
+            console.error('Error getting bad advice', error);
+            return 'Error getting bad advice .';
         }
     }
 
-    // Function to play speech using the Web Speech API
-   function speakText(text) {
+    // Functie om tekst af te spelen met behulp van de Web Speech API
+    function speakText(text) {
         return new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(text);
 
-            // Adjusting the voice settings for an eerie effect
-            utterance.rate = 0.75;  // Slower speech for a suspenseful feel
-            utterance.pitch = 0.5;  // Lower pitch for a darker tone
-            utterance.volume = 0.8; // Slightly lower volume for a subtle, ominous effect
+            // Aanpassen van de steminstellingen voor een griezelig effect
+            utterance.rate = 0.75;  // Langzamer spreken voor een suspensevolle sfeer
+            utterance.pitch = 0.5;  // Lagere toonhoogte voor een donkere klank
+            utterance.volume = 0.8; // Iets lager volume voor een subtiel, onheilspellend effect
 
-            // Event triggered when speech finishes
+            // Gebeurtenis die wordt geactiveerd wanneer het spreken is voltooid
             utterance.onend = () => {
                 resolve();
             };
 
-            // Speak the text with eerie adjustments
+            // Spreek de tekst met griezelige aanpassingen
             window.speechSynthesis.speak(utterance);
         });
-
-
     }
 
-    // Function to handle playing the audio and fetching next bad advice
+    // Functie om de audio af te spelen en het volgende verkeerde advies op te halen
     async function handleBadAdvice() {
-        // Fetch bad advice text from Ollama
+        // Haal verkeerd advies op van Ollama
         const advice = await fetchBadAdvice();
 
-        // Log the advice in the chat box (optional)
+        // Log het advies in het chatvenster
         const chatBox = document.getElementById('chat-box');
         const messageElement = document.createElement('div');
-        messageElement.textContent = `Evil Presence: ${advice}`;
+        messageElement.textContent = `Evil presence: ${advice}`;
         chatBox.appendChild(messageElement);
 
-        // Fetch and play the audio using Web Speech API
+        // Haal op en speel de audio af met behulp van de Web Speech API
         try {
             await speakText(advice);
         } catch (error) {
-            console.error('Error playing audio:', error);
+            console.error('Fout bij het afspelen van audio:', error);
         }
 
-        // Wait for 4 seconds before fetching the next bad advice
+        // Wacht 4 seconden voordat het volgende verkeerde advies wordt opgehaald
         setTimeout(handleBadAdvice, 4000);
     }
 
-    // Initialize when the page is loaded
+    // Initialiseer wanneer de pagina is geladen
     document.addEventListener('DOMContentLoaded', () => {
-        handleBadAdvice();  // Start the loop
+        handleBadAdvice();  // Start de lus
     });
 </script>
 <!-- Add a chat box to display messages -->

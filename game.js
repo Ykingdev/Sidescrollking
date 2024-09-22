@@ -4,6 +4,7 @@ class MainScene extends Phaser.Scene {
     }
 
     preload() {
+        // --- Sectie: Assets Voorladen ---
         this.load.image('sky', 'assets/sky.png');
         this.load.image('ground', 'assets/ground.png');
         this.load.image('platform', 'assets/platform.png');
@@ -16,6 +17,7 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
+        // --- Sectie: Variabelen Initialiseren ---
         this.gameSpeed = 200;
         this.gameStarted = false;
         this.gameOver = false;
@@ -24,27 +26,28 @@ class MainScene extends Phaser.Scene {
         this.score = 0;
         this.fallSpeedFactor = 1;
 
+        // --- Sectie: Achtergrond en Grond Toevoegen ---
         this.sky = this.add.tileSprite(400, 300, 800, 600, 'sky');
 
         this.ground = this.add.tileSprite(400, 568, 800, 64, 'ground');
         this.physics.add.existing(this.ground, true);
 
+        // --- Sectie: Speler Instellen ---
         this.player = this.physics.add.sprite(100, 450, 'dude');
         this.player.body.onWorldBounds = true;
 
         this.player.setDragX(600);
         this.player.setMaxVelocity(300, 600);
 
-
-        //groepen gemaakt voor de items
-        this.enemies = this.physics.add.group(); 
+        // --- Sectie: Groepen Maken voor Items ---
+        this.enemies = this.physics.add.group();
         this.platforms = this.physics.add.group({
             allowGravity: false,
             immovable: true
         });
         this.stars = this.physics.add.group();
 
-
+        // --- Sectie: Partikels Toevoegen ---
         this.particles = this.add.particles('star');
 
         this.lastPlatformX = this.player.x + 400;
@@ -52,16 +55,17 @@ class MainScene extends Phaser.Scene {
 
         this.generateInitialPlatforms();
 
-        // Colliders and overlaps
+        // --- Sectie: Colliders en Overlaps ---
         this.physics.add.collider(this.player, this.ground);
-        this.physics.add.collider(this.player, this.platforms );
+        this.physics.add.collider(this.player, this.platforms);
         this.physics.add.collider(this.stars, this.platforms);
 
         this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
         this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
         this.physics.add.collider(this.enemies, this.platforms, this.meteorBounce, null, this);
-        this.physics.add.collider(this.enemies, this.ground, this.meteorBounce, null, this); 
+        this.physics.add.collider(this.enemies, this.ground, this.meteorBounce, null, this);
 
+        // --- Sectie: Animaties Maken ---
         this.anims.create({
             key: 'left',
             frames: this.anims.generateFrameNumbers('dude', {
@@ -86,13 +90,13 @@ class MainScene extends Phaser.Scene {
             repeat: -1
         });
 
-        // Speler input opzetten
+        // --- Sectie: Speler Invoer Instellen ---
         this.cursors = this.input.keyboard.createCursorKeys();
         this.spacebar = this.input.keyboard.addKey(
             Phaser.Input.Keyboard.KeyCodes.SPACE
         );
 
-        // Text
+        // --- Sectie: Tekst Toevoegen ---
         this.scoreText = this.add.text(10, 10, 'Time: 0', {
             fontSize: '24px',
             fill: '#fff'
@@ -106,13 +110,13 @@ class MainScene extends Phaser.Scene {
             fill: '#fff'
         });
 
-        // Lore and start texts
+        // --- Sectie: Verhaal en Start Teksten ---
         this.loreDisplayed = true;
         this.loreText = this.add
             .text(
                 400,
                 300,
-                'As an astronaut, you have crashed on an alien planet because an alien infected your crew member on your ship. You can still hear your crew member, who was usually your eyes on the ground, but now you must try not to listen to their advice.',
+                'Als astronaut ben je gestrand op een buitenaardse planeet omdat een alien je bemanningslid aan boord heeft geïnfecteerd. Je kunt je bemanningslid nog steeds horen, die meestal jouw ogen op de grond was, maar nu moet je proberen hun advies niet te volgen. Druk op spatie om verder te gaan.',
                 {
                     fontSize: '24px',
                     fill: '#fff',
@@ -123,14 +127,14 @@ class MainScene extends Phaser.Scene {
             .setOrigin(0.5);
 
         this.startText = this.add
-            .text(400, 300, 'Press the arrow keys to start', {
+            .text(400, 300, 'Druk op de pijltjestoetsen om te beginnen', {
                 fontSize: '32px',
                 fill: '#fff'
             })
             .setOrigin(0.5)
             .setVisible(false);
 
-        // Game over texts
+        // --- Sectie: Game Over Teksten ---
         this.gameOverText = this.add
             .text(400, 200, 'Game Over', {
                 fontSize: '48px',
@@ -141,7 +145,7 @@ class MainScene extends Phaser.Scene {
             .setDepth(10);
 
         this.retryText = this.add
-            .text(400, 300, 'Press spacebar to retry', {
+            .text(400, 300, 'Druk op spatiebalk om opnieuw te proberen', {
                 fontSize: '32px',
                 fill: '#fff'
             })
@@ -149,7 +153,7 @@ class MainScene extends Phaser.Scene {
             .setVisible(false)
             .setDepth(10);
 
-        // Timers
+        // --- Sectie: Timers Instellen ---
         this.speedIncreaseTimer = this.time.addEvent({
             delay: 5000,
             callback: () => {
@@ -160,11 +164,12 @@ class MainScene extends Phaser.Scene {
             loop: true
         });
 
-        // Enemy timer will start when the game starts
+        // Timer voor vijanden zal starten wanneer het spel begint
         this.enemyTimer = null;
     }
 
     update(time, delta) {
+        // --- Sectie: Verhaal Weergeven ---
         if (this.loreDisplayed) {
             if (Phaser.Input.Keyboard.JustDown(this.spacebar)) {
                 this.loreText.setVisible(false);
@@ -174,6 +179,7 @@ class MainScene extends Phaser.Scene {
             return;
         }
 
+        // --- Sectie: Spel Starten ---
         if (!this.gameStarted) {
             if (
                 this.cursors.left.isDown ||
@@ -185,9 +191,9 @@ class MainScene extends Phaser.Scene {
                 this.startText.setVisible(false);
                 this.startScoreTimer();
 
-            
+                // Start de vijandentimer
                 this.enemyTimer = this.time.addEvent({
-                    delay: 2000, // Adjust the delay as needed
+                    delay: 2000, // Pas de vertraging indien nodig aan
                     callback: this.spawnEnemy,
                     callbackScope: this,
                     loop: true
@@ -197,6 +203,7 @@ class MainScene extends Phaser.Scene {
             }
         }
 
+        // --- Sectie: Game Over Afhandelen ---
         if (this.gameOver) {
             if (Phaser.Input.Keyboard.JustDown(this.spacebar)) {
                 this.restartGame();
@@ -204,11 +211,11 @@ class MainScene extends Phaser.Scene {
             return;
         }
 
-        // Background scroll
+        // --- Sectie: Achtergrond Scrollen ---
         this.sky.tilePositionX += this.gameSpeed * delta * 0.001;
         this.ground.tilePositionX += this.gameSpeed * delta * 0.001;
 
-        // Check for player movement
+        // --- Sectie: Speler Beweging Controleren ---
         if (this.cursors.left.isDown) {
             this.player.setAccelerationX(-1000);
             this.player.anims.play('left', true);
@@ -218,8 +225,8 @@ class MainScene extends Phaser.Scene {
         } else {
             this.player.setAccelerationX(0);
 
-            // If no input, push the player left as the platforms and background scroll
-            this.player.x -= this.gameSpeed * delta * 0.001; // Move the player backward
+            // Als er geen invoer is, duw de speler naar links terwijl platforms en achtergrond scrollen
+            this.player.x -= this.gameSpeed * delta * 0.001; // Beweeg de speler naar achteren
             if (this.player.body.velocity.x > 10) {
                 this.player.anims.play('right', true);
             } else if (this.player.body.velocity.x < -10) {
@@ -229,22 +236,22 @@ class MainScene extends Phaser.Scene {
             }
         }
 
-        // Vertical movement - fast fall
+        // --- Sectie: Verticale Beweging - Snelle Val ---
         if (this.cursors.down.isDown) {
             this.player.setVelocityY(500);
         }
 
-        // Jump logic
+        // --- Sectie: Spring Logica ---
         if (this.cursors.up.isDown && this.player.body.touching.down) {
             this.player.setVelocityY(-600 * this.fallSpeedFactor);
         }
 
-        // Check if the player is pushed off-screen (left side)
+        // --- Sectie: Speler Buiten Scherm Controleren ---
         if (this.player.x < 0 || this.player.y > this.cameras.main.height || this.player.y < 0) {
             this.endGame();
         }
 
-        // Platforms movement and recycling
+        // --- Sectie: Platforms Beweging en Hergebruik ---
         this.platforms.getChildren().forEach((platform) => {
             platform.x -= this.gameSpeed * delta * 0.001;
             platform.refreshBody();
@@ -259,7 +266,7 @@ class MainScene extends Phaser.Scene {
             }
         });
 
-        // Destroy enemies that move off-screen
+        // --- Sectie: Vijanden Verwijderen die Buiten Scherm Gaan ---
         this.enemies.getChildren().forEach((enemy) => {
             if (enemy.y > this.game.config.height) {
                 enemy.destroy();
@@ -268,41 +275,44 @@ class MainScene extends Phaser.Scene {
     }
 
 
+    // --- Sectie: Speler en Platform Collisie ---
     playerPlatformCollision(player, platform) {
-        // Check for side collisions
+        // Controleer op zijcollisies
         if (
             (player.body.touching.right && platform.body.touching.left) ||
             (player.body.touching.left && platform.body.touching.right)
         ) {
-            // Determine collision direction and apply force
+            // Bepaal de richting van de botsing en pas kracht toe
             if (player.body.touching.right && platform.body.touching.left) {
-                // Player hit from the right
-                player.setVelocityX(-500); // Adjust as needed
+                // Speler geraakt vanaf rechts
+                player.setVelocityX(-500); // Pas indien nodig aan
             } else if (player.body.touching.left && platform.body.touching.right) {
-                // Player hit from the left
-                player.setVelocityX(500); // Adjust as needed
+                // Speler geraakt vanaf links
+                player.setVelocityX(500); // Pas indien nodig aan
             }
 
-            // Apply upward force
-            player.setVelocityY(-200); // Adjust as needed
+            // Pas opwaartse kracht toe
+            player.setVelocityY(-200); // Pas indien nodig aan
 
-            // Optional: Play a sound or animation
+            // Optioneel: Speel een geluid of animatie
         }
     }
 
+    // --- Sectie: Meteoor Stuiteren ---
     meteorBounce(enemy, platformOrGround) {
-        // Increase the bounce count
+        // Verhoog het aantal stuiteringen
         enemy.bounces += 1;
 
-        // Add particles at enemy's position
+        // Voeg deeltjes toe op de positie van de meteoor
         this.createBounceParticles(enemy.x, enemy.y);
 
-        // Check if meteor has bounced enough times
+        // Controleer of de meteoor genoeg keren heeft gestuiterd
         if (enemy.bounces >= this.extraLives) {
             enemy.destroy();
         }
     }
 
+    // --- Sectie: Deeltjes voor Stuiteren Maken ---
     createBounceParticles(x, y) {
         this.particles.createEmitter({
             x: x,
@@ -322,48 +332,52 @@ class MainScene extends Phaser.Scene {
         }).explode(10, x, y);
     }
 
+    // --- Sectie: Vijanden Spawnen ---
     spawnEnemy() {
         const x = Phaser.Math.Between(0, this.game.config.width);
         const y = 0;
         const enemy = this.enemies.create(x, y, 'meteor');
 
-        // Set a random scale between 0.5 and 1.5
+        // Stel een willekeurige schaal in tussen 0.5 en 1.5
         const scale = Phaser.Math.FloatBetween(0.5, 1.5);
         enemy.setScale(scale);
 
-        // Adjust the physics body size to match the new display size
+        // Pas de fysica body grootte aan om overeen te komen met de nieuwe weergavegrootte
         enemy.body.setSize(enemy.displayWidth, enemy.displayHeight);
         enemy.body.setOffset(0, 0);
 
-        // Set initial velocityY proportional to fallSpeedFactor
+        // Stel de initiële velocityY in proportioneel aan fallSpeedFactor
         const fallSpeed = Phaser.Math.Between(200, 400) * this.fallSpeedFactor;
         enemy.setVelocityY(fallSpeed);
 
-        // Enable gravity for enemies
+        // Schakel zwaartekracht in voor vijanden
         enemy.body.setAllowGravity(true);
 
-        // Set bounce
+        // Stel stuiteren in
         enemy.setBounce(1);
 
-        // Initialize bounce count
+        // Initialiseer het stuiter aantal
         enemy.bounces = 0;
 
-        // Set collide with world bounds to false
+        // Stel collide met wereldgrenzen uit
         enemy.setCollideWorldBounds(false);
     }
 
+    // --- Sectie: Vijand Treft Speler ---
     hitEnemy(player, enemy) {
-        enemy.destroy(); // Remove the enemy
+        enemy.destroy(); // Verwijder de vijand
 
         if (this.extraLives > 0) {
-            // Player has an extra life
+            // Speler heeft een extra leven
             this.extraLives -= 1;
             this.extraLivesText.setText('Lives: ' + this.extraLives);
         } else {
-            // Player dies
+            // Speler sterft
             this.endGame();
         }
     }
+
+    // --- Sectie: Initiële Platforms Genereren ---
     generateInitialPlatforms() {
         let x = this.lastPlatformX;
         let y = this.lastPlatformY;
@@ -372,33 +386,34 @@ class MainScene extends Phaser.Scene {
             let platform = this.platforms.create(x, y, 'platform');
             platform.setScale(1).refreshBody();
 
-            platform.body.setImmovable(true); // Ensure the platform does not move on collision
-            platform.body.setSize(platform.displayWidth, platform.displayHeight); // Update the size to match the scale
-            platform.body.setOffset(0, 0); // Align the body
+            platform.body.setImmovable(true); // Zorg ervoor dat het platform niet beweegt bij botsing
+            platform.body.setSize(platform.displayWidth, platform.displayHeight); // Update de grootte om overeen te komen met de schaal
+            platform.body.setOffset(0, 0); // Lijn de body uit
 
-            // Add a star on the platform
+            // Voeg een ster toe op het platform
             let star = this.stars.create(x, y - 32, 'star');
             star.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
             star.body.setAllowGravity(false);
             platform.star = star;
 
-            // Next platform position
+            // Volgende platform positie
             x += 200;
             y = this.getNextPlatformY();
         }
         this.lastPlatformX = x - 200;
     }
 
+    // --- Sectie: Speler en Platform Collisie (Duplicaat) ---
     playerPlatformCollision(player, platform) {
-        // Custom collision handling
+        // Aangepaste botsingsafhandeling
         if (player.body.touching.down && platform.body.touching.up) {
-            // Stop the player from falling through the platform
+            // Stop de speler met vallen door het platform
             player.setVelocityY(0);
-            player.body.position.y = platform.body.position.y - player.body.height; // Snap the player to the platform
+            player.body.position.y = platform.body.position.y - player.body.height; // Bevestig de speler aan het platform
         }
     }
 
-
+    // --- Sectie: Platform Hergebruiken ---
     recyclePlatform(platform) {
         const distanceAhead = 600;
         let x = this.player.x + distanceAhead;
@@ -408,11 +423,11 @@ class MainScene extends Phaser.Scene {
         platform.y = y;
         platform.refreshBody();
 
-        // Adjust physics body size
+        // Pas de fysica body grootte aan
         platform.body.setSize(platform.displayWidth, platform.displayHeight);
         platform.body.setOffset(0, 0);
 
-        // Reposition or create star
+        // Herpositioneer of creëer een ster
         if (platform.star && !platform.star.active) {
             platform.star.enableBody(true, platform.x, platform.y - 32, true, true);
             platform.star.setActive(true).setVisible(true);
@@ -429,6 +444,7 @@ class MainScene extends Phaser.Scene {
         platform.body.setOffset(0, 0);
     }
 
+    // --- Sectie: Volgende Platform Y Bepalen ---
     getNextPlatformY() {
         const minY = 150;
         const maxY = 450;
@@ -451,12 +467,13 @@ class MainScene extends Phaser.Scene {
         return newY;
     }
 
+    // --- Sectie: Ster Verzamelen ---
     collectStar(player, star) {
         star.disableBody(true, true);
         this.starsCollected++;
         this.starText.setText('Stars: ' + this.starsCollected);
 
-        // Check if 5 stars have been collected
+        // Controleer of er 5 sterren zijn verzameld
         if (this.starsCollected >= 5) {
             this.extraLives += 1;
             this.starsCollected -= 5;
@@ -464,7 +481,7 @@ class MainScene extends Phaser.Scene {
             this.starText.setText('Stars: ' + this.starsCollected);
         }
 
-        // Remove star reference from platform
+        // Verwijder ster referentie van het platform
         this.platforms.getChildren().forEach((platform) => {
             if (platform.star === star) {
                 platform.star = null;
@@ -472,6 +489,7 @@ class MainScene extends Phaser.Scene {
         });
     }
 
+    // --- Sectie: Spel Einde Afhandelen ---
     endGame() {
         this.gameOver = true;
         this.gameOverText.setVisible(true);
@@ -480,13 +498,14 @@ class MainScene extends Phaser.Scene {
         this.stopScoreTimer();
         this.speedIncreaseTimer.remove(false);
 
-        // Stop the enemy timer
+        // Stop de vijandentimer
         if (this.enemyTimer) {
             this.enemyTimer.remove(false);
             this.enemyTimer = null;
         }
     }
 
+    // --- Sectie: Score Timer Starten ---
     startScoreTimer() {
         this.scoreTimer = this.time.addEvent({
             delay: 1000,
@@ -499,27 +518,29 @@ class MainScene extends Phaser.Scene {
         });
     }
 
+    // --- Sectie: Score Timer Stoppen ---
     stopScoreTimer() {
         if (this.scoreTimer) {
             this.scoreTimer.remove(false);
         }
     }
 
+    // --- Sectie: Spel Herstarten ---
     restartGame() {
         this.gameOver = false;
         this.gameStarted = false;
 
-        // Reset player
+        // Reset speler
         this.player.setPosition(100, 450);
         this.player.setVelocity(0);
         this.player.setAccelerationX(0);
 
-        // Clear objects
+        // Verwijder objecten
         this.platforms.clear(true, true);
         this.stars.clear(true, true);
         this.enemies.clear(true, true);
 
-        // Reset variables
+        // Reset variabelen
         this.starsCollected = 0;
         this.score = 0;
         this.extraLives = 0;
@@ -531,26 +552,21 @@ class MainScene extends Phaser.Scene {
         this.scoreText.setText('Time: 0');
         this.extraLivesText.setText('Lives: 0');
 
-        // Generate platforms
+        // Genereer platforms opnieuw
         this.generateInitialPlatforms();
 
-        // Reset colliders and overlaps
-        this.physics.add.collider(this.player, this.platforms, this.playerPlatformCollision, null, this);
-        this.physics.add.collider(this.stars, this.platforms);
-        this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
-
-        // Hide texts
+        // Verberg teksten
         this.gameOverText.setVisible(false);
         this.retryText.setVisible(false);
         this.startText.setVisible(true);
 
-        // Remove the enemy timer
+        // Verwijder de vijandentimer
         if (this.enemyTimer) {
             this.enemyTimer.remove(false);
             this.enemyTimer = null;
         }
 
-        // Restart the speed increase timer
+        // Herstart de snelheidverhoging timer
         this.speedIncreaseTimer.reset({
             delay: 5000,
             callback: () => {
@@ -561,7 +577,7 @@ class MainScene extends Phaser.Scene {
             loop: true
         });
 
-        // Recreate the particle manager
+        // creëer de partikelbeheerder
         if (this.particles) {
             this.particles.destroy();
         }
@@ -577,7 +593,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 1000 },
-            debug: false // Set to true to enable physics debugging if needed
+            debug: false // Zet op true om fysica debugging in te schakelen indien nodig
         }
     },
     scene: [MainScene]
